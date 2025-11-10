@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.28)
+project(Cpp-Reflection)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+set(CMAKE_CXX_STANDARD 20)
+
+
+
+add_library(Reflection STATIC)
+
+set_target_properties(Reflection PROPERTIES LINKER_LANGUAGE CXX)
+
+target_sources(Reflection PUBLIC ${CMAKE_SOURCE_DIR}/src/Reflection.h)
