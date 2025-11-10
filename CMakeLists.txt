@@ -13,4 +13,4 @@ add_library(Reflection STATIC)
 
 set_target_properties(Reflection PROPERTIES LINKER_LANGUAGE CXX)
 
-target_sources(Reflection PUBLIC ${CMAKE_SOURCE_DIR}/src/Reflection.h)
+target_sources(Reflection PUBLIC ${CMAKE_SOURCE_DIR}/src/Reflection.h ${CMAKE_SOURCE_DIR}/src/Reflection.cpp)
