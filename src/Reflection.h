@@ -86,7 +86,7 @@ static constexpr bool exist_v = true; \
 	static inline constexpr auto fields = std::make_tuple(__VA_ARGS__);}
 
 #define ENUM_FIELD(Value_, ...) std::make_tuple(#Value_,\
-	static_cast<int>(Value_),\
+	static_cast<int>(Type::Value_),\
 	Reflection::hash_string(#Value_))
 
 
@@ -109,6 +109,14 @@ namespace Reflection
     {
         static constexpr bool exist_v = false;
     };
+
+
+    template<typename EnumType_>
+    concept IsReflectedEnum = std::is_enum_v<EnumType_> && EnumInfo<EnumType_>::exist_v;
+
+    template<typename ReflectedType_>
+    concept IsReflectedType = TypeInfo<ReflectedType_>::exist_v;
+
 
     namespace priv
     {
@@ -376,8 +384,26 @@ namespace Reflection
         return filter_fields_impl<Tuple, Indices, Constraint>::filter(tuple);
     }
 
+    //Functor need to take 3 arguments; name, value, hash_name
+    template<IsReflectedEnum T, typename F>
+    constexpr void for_each_enum_fields(F &&func)
+    {
+        std::apply([&](auto &&... field)
+        {
+            (..., [&](auto &&f)
+            {
+                func(
+                    Get<enum_fields_getter_info::name>(f),
+                    Get<enum_fields_getter_info::value>(f),
+                    Get<enum_fields_getter_info::hash_name>(f)
+                );
+            }(field));
+        }, EnumInfo<T>::fields);
+    }
 
-    template<typename T, typename F>
+
+    //Functor need to take 4 arguments; name, value, hash_name, meta_data
+    template<IsReflectedType T, typename F>
     constexpr void for_each_fields(F &&func)
     {
         std::apply([&](auto &&... field)
@@ -394,7 +420,7 @@ namespace Reflection
         }, TypeInfo<T>::fields);
     }
 
-    template<typename T, typename F>
+    template<IsReflectedType T, typename F>
     constexpr void for_each_member(T &obj, F &&func)
     {
         std::apply([&](auto &&... field)
@@ -439,7 +465,7 @@ namespace Reflection
         return result;
     }
 
-    template<typename ObjectType>
+    template<IsReflectedType ObjectType>
     constexpr field_meta_data GetFieldMetaData(const char *Name)
     {
         hash32 hash_name = hash_string(Name);
@@ -473,7 +499,7 @@ namespace Reflection
         return result;
     }
 
-    template<typename MethodSignature_, typename ObjectType_, typename ReturnType = MethodSignature_ *>
+    template<typename MethodSignature_, IsReflectedType ObjectType_, typename ReturnType = MethodSignature_ *>
     constexpr auto GetStaticMethod(const char *Name) -> ReturnType
     {
         auto hash_wanted_name = hash_string(Name);
@@ -498,7 +524,7 @@ namespace Reflection
         return nullptr;
     }
 
-    template<typename MemberType_, typename ObjectType_, typename ReturnType = MemberType_ *>
+    template<typename MemberType_, IsReflectedType ObjectType_, typename ReturnType = MemberType_ *>
     constexpr auto GetStaticMember(const char *Name) -> ReturnType
     {
         auto hash_wanted_name = hash_string(Name);
@@ -524,7 +550,7 @@ namespace Reflection
         return nullptr;
     }
 
-    template<typename MethodSignature_, typename ObjectType_, typename ReturnType = MethodSignature_ ObjectType_::*>
+    template<typename MethodSignature_, IsReflectedType ObjectType_, typename ReturnType = MethodSignature_ ObjectType_::*>
     constexpr auto GetMethod(const char *Name) -> ReturnType
     {
         auto hash_wanted_name = hash_string(Name);
@@ -549,7 +575,7 @@ namespace Reflection
         return nullptr;
     }
 
-    template<typename MemberType_, typename ObjectType_, typename ReturnType = MemberType_ ObjectType_::*>
+    template<typename MemberType_, IsReflectedType ObjectType_, typename ReturnType = MemberType_ ObjectType_::*>
     ReturnType GetMember(const char *Name)
     {
         auto hash_wanted_name = hash_string(Name);
@@ -574,7 +600,7 @@ namespace Reflection
         return nullptr;
     }
 
-    template<typename MethodSignature_, typename ObjectType_, typename... Args>
+    template<typename MethodSignature_, IsReflectedType ObjectType_, typename... Args>
     void InvokeMethod(ObjectType_ &Object, const char *Name, Args &&... args)
     {
         auto Method = GetMethod<MethodSignature_, ObjectType_>(Name);
@@ -588,7 +614,7 @@ namespace Reflection
         (Object.*Method)(std::forward<Args>(args)...);
     }
 
-    template<typename Value_, typename Type_>
+    template<typename Value_, IsReflectedType Type_>
     constexpr void SetValue(Type_ &Obj, const char *Name, const Value_ &Value)
     {
         auto Member = GetMember<Value_, Type_>(Name);
@@ -599,14 +625,14 @@ namespace Reflection
     }
 
 
-    template<typename Value_, typename Type_>
+    template<typename Value_, IsReflectedType Type_>
     constexpr Value_ *GetValue(Type_ &Obj, const char *Name)
     {
         auto Member = GetMember<Value_, Type_>(Name);
         return Member ? &(Obj.*Member) : nullptr;
     }
 
-    template<typename Type_>
+    template<IsReflectedType Type_>
     class Enable_Reflection_For_This
     {
         Type_ *GetRealType()
@@ -690,18 +716,11 @@ namespace Reflection
         }
     };
 
-    template<typename EnumType_>
-    concept IsEnum = std::is_enum_v<EnumType_>;
 
-    template<IsEnum EnumType_>
+    template<IsReflectedEnum EnumType_>
     constexpr const char* GetEnumName(EnumType_ EnumValue)
     {
         int ValueToSearch = static_cast<int>(EnumValue);
-        if constexpr (!EnumInfo<EnumType_>::exist_v)
-        {
-            return nullptr;
-        }
-        else
         {
             const char* result = nullptr;
             find_index_field_in_tuple(EnumInfo<EnumType_>::fields,
@@ -714,15 +733,10 @@ namespace Reflection
         }
     }
 
-    template<IsEnum EnumType_>
+    template<IsReflectedEnum EnumType_>
     constexpr EnumType_ GetEnumValue(const char* Name)
     {
         auto hash_name = hash_string(Name);
-        if constexpr (!EnumInfo<EnumType_>::exist_v)
-        {
-            return nullptr;
-        }
-        else
         {
             EnumType_ result{0};
             find_index_field_in_tuple(EnumInfo<EnumType_>::fields,
@@ -733,5 +747,29 @@ namespace Reflection
                 });
             return result;
         }
+    }
+
+    template<IsReflectedEnum EnumType_>
+    constexpr std::vector<const char*> GetAllEnumNames()
+    {
+        std::vector<const char*> result;
+        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name)
+        {
+            result.push_back(name);
+        });
+
+        return result;
+    }
+
+    template<IsReflectedEnum EnumType_>
+    constexpr std::vector<EnumType_> GetAllEnumValue()
+    {
+        std::vector<EnumType_> result;
+        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name)
+        {
+            result.push_back(static_cast<EnumType_>(value));
+        });
+
+        return result;
     }
 }

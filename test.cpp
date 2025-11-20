@@ -6,10 +6,13 @@ enum class Test
 };
 
 REFLECT_ENUM(Test,
-    ENUM_FIELD(Test::a),
-    ENUM_FIELD(Test::b),
-    ENUM_FIELD(Test::c)
+    ENUM_FIELD(a),
+    ENUM_FIELD(b),
+    ENUM_FIELD(c)
     );
+
+using Type = Test;
+
 
 int main()
 {
@@ -18,5 +21,15 @@ int main()
     auto EnumName = Reflection::GetEnumName(Test::c);
     std::cout <<  EnumName << "\n";
     std::cout << (int)Reflection::GetEnumValue<Test>(EnumName) << "\n";
+
+    for (auto enum_name: Reflection::GetAllEnumNames<Test>())
+    {
+        std::cout << enum_name << "\n";
+    }
+    for (auto enum_value : Reflection::GetAllEnumValue<Test>())
+    {
+        std::cout << (int)enum_value << "\n";
+
+    }
 
 }
