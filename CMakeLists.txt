@@ -15,3 +15,9 @@ set_target_properties(Reflection PROPERTIES LINKER_LANGUAGE CXX)
 
 target_sources(Reflection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/Reflection.h ${CMAKE_CURRENT_SOURCE_DIR}/src/Reflection.cpp)
 target_include_directories(Reflection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+
+add_executable(Reflection_Test)
+
+target_sources(Reflection_Test PUBLIC ${CMAKE_SOURCE_DIR}/test.cpp)
+target_link_libraries(Reflection_Test PUBLIC Reflection)
