@@ -6,13 +6,19 @@ enum class Test
 };
 
 REFLECT_ENUM(Test,
-    ENUM_FIELD(a),
-    ENUM_FIELD(b),
-    ENUM_FIELD(c)
+    ENUM_FIELD(a, Test),
+    ENUM_FIELD(b, Test2),
+    ENUM_FIELD(c, Test3)
     );
 
 using Type = Test;
 
+
+template<size_t in>
+void t()
+{
+
+}
 
 int main()
 {

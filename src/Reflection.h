@@ -85,13 +85,16 @@ static constexpr bool exist_v = true; \
 	constexpr inline static bool exist_v = true;\
 	static inline constexpr auto fields = std::make_tuple(__VA_ARGS__);}
 
-#define ENUM_FIELD(Value_, ...) std::make_tuple(#Value_,\
+#define ENUM_FIELD(Value_, ...) std::make_tuple(Reflection::priv::is_same_string("", #__VA_ARGS__) ? \
+    #Value_ :  #__VA_ARGS__,\
 	static_cast<int>(Type::Value_),\
 	Reflection::hash_string(#Value_))
 
 
 namespace Reflection
 {
+
+
     template<template<typename> typename Template>
     struct TemplateInfo
     {
@@ -131,6 +134,20 @@ namespace Reflection
             {
                 return own_fields;
             }
+        }
+
+        template <size_t N>
+        struct FixedString {
+            char data[N]{};
+
+            constexpr const char* c_str() const { return data; }
+
+            constexpr operator std::string_view() const { return std::string_view(data); }
+        };
+
+        constexpr bool is_same_string(std::string_view string_one, std::string_view string_two)
+        {
+            return string_one == string_two;
         }
     }
 

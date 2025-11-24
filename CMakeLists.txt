@@ -7,8 +7,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(CMAKE_CXX_STANDARD 20)
 
-
-
 add_library(Reflection STATIC)
 
 set_target_properties(Reflection PROPERTIES LINKER_LANGUAGE CXX)
@@ -22,4 +20,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
     target_sources(Reflection_Test PUBLIC ${CMAKE_SOURCE_DIR}/test.cpp)
     target_link_libraries(Reflection_Test PUBLIC Reflection)
+endif()
+
+
+if(MSVC)
+    target_compile_options(Reflection_Test PRIVATE /Zc:preprocessor)
 endif()
