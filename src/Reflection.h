@@ -649,7 +649,7 @@ namespace Reflection
         return Member ? &(Obj.*Member) : nullptr;
     }
 
-    template<IsReflectedType Type_>
+    template<typename Type_>
     class Enable_Reflection_For_This
     {
         Type_ *GetRealType()
