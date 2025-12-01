@@ -22,7 +22,3 @@ if(PROJECT_IS_TOP_LEVEL)
     target_link_libraries(Reflection_Test PUBLIC Reflection)
 endif()
 
-
-if(MSVC)
-    target_compile_options(Reflection_Test PRIVATE /Zc:preprocessor)
-endif()

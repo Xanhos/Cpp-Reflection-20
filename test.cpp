@@ -6,9 +6,9 @@ enum class Test
 };
 
 REFLECT_ENUM(Test,
-    ENUM_FIELD(a, Test),
-    ENUM_FIELD(b, Test2),
-    ENUM_FIELD(c, Test3)
+    ENUM_FIELD(a, .set_custom_name("Test")),
+    ENUM_FIELD(b),
+    ENUM_FIELD(c)
     );
 
 using Type = Test;
@@ -17,14 +17,13 @@ using Type = Test;
 template<size_t in>
 void t()
 {
-
 }
 
 int main()
 {
     auto t = Reflection::EnumInfo<Test>::fields;
 
-    auto EnumName = Reflection::GetEnumName(Test::c);
+    auto EnumName = Reflection::GetEnumName(Test::a);
     std::cout <<  EnumName << "\n";
     std::cout << (int)Reflection::GetEnumValue<Test>(EnumName) << "\n";
 

@@ -85,10 +85,10 @@ static constexpr bool exist_v = true; \
 	constexpr inline static bool exist_v = true;\
 	static inline constexpr auto fields = std::make_tuple(__VA_ARGS__);}
 
-#define ENUM_FIELD(Value_, ...) std::make_tuple(Reflection::priv::is_same_string("", #__VA_ARGS__) ? \
-    #Value_ :  #__VA_ARGS__,\
+#define ENUM_FIELD(Value_, ...) std::make_tuple(#Value_,\
 	static_cast<int>(Type::Value_),\
-	Reflection::hash_string(#Value_))
+	Reflection::hash_string(#Value_),\
+    Reflection::enum_meta_data{.custom_name = #Value_}__VA_ARGS__)
 
 
 namespace Reflection
@@ -113,6 +113,19 @@ namespace Reflection
         static constexpr bool exist_v = false;
     };
 
+    using hash32 = uint32_t;
+
+
+    static constexpr hash32 hash_string(const char *str)
+    {
+        hash32 hash = 2166136261u;
+        while (*str)
+        {
+            hash ^= static_cast<hash32>(*str++);
+            hash *= 16777619u;
+        }
+        return hash;
+    }
 
     template<typename EnumType_>
     concept IsReflectedEnum = std::is_enum_v<EnumType_> && EnumInfo<EnumType_>::exist_v;
@@ -218,10 +231,22 @@ namespace Reflection
         }
     };
 
+    struct enum_meta_data
+    {
+        const char* custom_name = "";
+        hash32 custom_name_hash = hash_string("");
+
+        constexpr enum_meta_data& set_custom_name(const char* name)
+        {
+            custom_name = name;
+            custom_name_hash = hash_string(name);
+            return *this;
+        }
+     };
+
     static inline field_meta_data invalid_meta_data{};
 
 
-    using hash32 = uint32_t;
 
     enum class fields_getter_info : uint8_t
     {
@@ -235,7 +260,8 @@ namespace Reflection
     {
         name = 0,
         value = 1,
-        hash_name = 2
+        hash_name = 2,
+        meta_data = 3
     };
 
     template<fields_getter_info Index, typename Tuple>
@@ -250,16 +276,6 @@ namespace Reflection
         return std::get<static_cast<size_t>(Index)>(std::forward<Tuple>(tuple));
     }
 
-    static constexpr hash32 hash_string(const char *str)
-    {
-        hash32 hash = 2166136261u;
-        while (*str)
-        {
-            hash ^= static_cast<hash32>(*str++);
-            hash *= 16777619u;
-        }
-        return hash;
-    }
 
     template<typename T>
     struct has_arguments : std::false_type
@@ -412,7 +428,8 @@ namespace Reflection
                 func(
                     Get<enum_fields_getter_info::name>(f),
                     Get<enum_fields_getter_info::value>(f),
-                    Get<enum_fields_getter_info::hash_name>(f)
+                    Get<enum_fields_getter_info::hash_name>(f),
+                    Get<enum_fields_getter_info::meta_data>(f)
                 );
             }(field));
         }, EnumInfo<T>::fields);
@@ -744,6 +761,23 @@ namespace Reflection
                 [=](auto& element){return Get<enum_fields_getter_info::value>(element) == ValueToSearch;},
                 [&](auto& element)
                 {
+                    result = Get<enum_fields_getter_info::meta_data>(element).custom_name;
+                });
+            return result;
+        }
+    }
+
+
+    template<IsReflectedEnum EnumType_>
+    constexpr const char* GetEnumTrueName(EnumType_ EnumValue)
+    {
+        int ValueToSearch = static_cast<int>(EnumValue);
+        {
+            const char* result = nullptr;
+            find_index_field_in_tuple(EnumInfo<EnumType_>::fields,
+                [=](auto& element){return Get<enum_fields_getter_info::value>(element) == ValueToSearch;},
+                [&](auto& element)
+                {
                     result = Get<enum_fields_getter_info::name>(element);
                 });
             return result;
@@ -757,7 +791,11 @@ namespace Reflection
         {
             EnumType_ result{0};
             find_index_field_in_tuple(EnumInfo<EnumType_>::fields,
-                [=](auto& element){return Get<enum_fields_getter_info::hash_name>(element) == hash_name;},
+                [=](auto& element)
+                {
+                    return Get<enum_fields_getter_info::hash_name>(element) == hash_name ||
+                        Get<enum_fields_getter_info::meta_data>(element).custom_name_hash == hash_name;
+                },
                 [&](auto& element)
                 {
                     result = static_cast<EnumType_>(Get<enum_fields_getter_info::value>(element));
@@ -770,7 +808,19 @@ namespace Reflection
     constexpr std::vector<const char*> GetAllEnumNames()
     {
         std::vector<const char*> result;
-        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name)
+        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name, auto meta_data)
+        {
+            result.push_back(meta_data.custom_name);
+        });
+
+        return result;
+    }
+
+    template<IsReflectedEnum EnumType_>
+ constexpr std::vector<const char*> GetAllEnumTrueNames()
+    {
+        std::vector<const char*> result;
+        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name, auto meta_data)
         {
             result.push_back(name);
         });
@@ -782,7 +832,7 @@ namespace Reflection
     constexpr std::vector<EnumType_> GetAllEnumValue()
     {
         std::vector<EnumType_> result;
-        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name)
+        for_each_enum_fields<EnumType_>([&](auto name, auto value, auto hash_name, auto meta_data)
         {
             result.push_back(static_cast<EnumType_>(value));
         });
